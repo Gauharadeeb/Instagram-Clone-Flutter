@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 
 void main() async {
-  // WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   // await Firebase.initializeApp();
 
   runApp(const ClassicoApp());

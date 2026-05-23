@@ -1,179 +1,330 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
-import 'instagram_home_screen.dart';
+import '../../core/providers/feed_provider.dart';
+import '../../models/post.dart';
+import '../../services/feed_api_service.dart';
+import '../../widgets/post_card.dart';
 
-class InstagramFeedScreen extends StatelessWidget {
-  const InstagramFeedScreen({super.key});
+class InstagramFeedScreen extends StatefulWidget {
+  const InstagramFeedScreen({
+    super.key,
+    required this.username,
+    this.onCreatePost,
+    this.refreshToken = 0,
+  });
 
-  static const _posts = [
-    _FeedPost(
-      username: 'aria.james',
-      location: 'Mumbai, India',
-      imageUrl: 'https://picsum.photos/seed/classico1/800/900',
-      likes: '14,281 likes',
-      caption: 'Weekend coffee, sunshine, and soft moments.',
-    ),
-    _FeedPost(
-      username: 'noahstreet',
-      location: 'Delhi',
-      imageUrl: 'https://picsum.photos/seed/classico2/800/900',
-      likes: '8,943 likes',
-      caption: 'City lights always feel different after rain.',
-    ),
-    _FeedPost(
-      username: 'mia.visuals',
-      location: 'Jaipur',
-      imageUrl: 'https://picsum.photos/seed/classico3/800/900',
-      likes: '22,110 likes',
-      caption: 'Colors, texture, and a little golden hour magic.',
-    ),
-    _FeedPost(
-      username: 'liamframes',
-      location: 'Goa',
-      imageUrl: 'https://picsum.photos/seed/classico4/800/900',
-      likes: '11,507 likes',
-      caption: 'Ocean breeze and no plans for the rest of the day.',
-    ),
-    _FeedPost(
-      username: 'zoe.daily',
-      location: 'Bangalore',
-      imageUrl: 'https://picsum.photos/seed/classico5/800/900',
-      likes: '19,764 likes',
-      caption: 'Simple outfit, good mood, and one perfect shot.',
-    ),
-  ];
+  final String username;
+  final VoidCallback? onCreatePost;
+  final int refreshToken;
+
+  @override
+  State<InstagramFeedScreen> createState() => _InstagramFeedScreenState();
+}
+
+class _InstagramFeedScreenState extends State<InstagramFeedScreen> {
+  late final FeedProvider _feedProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedProvider = FeedProvider(apiService: FeedApiService());
+    _feedProvider.loadFeed();
+  }
+
+  @override
+  void didUpdateWidget(covariant InstagramFeedScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _feedProvider.refreshFeed();
+    }
+  }
+
+  @override
+  void dispose() {
+    _feedProvider.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refreshFeed() => _feedProvider.refreshFeed();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          'Instagram',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontStyle: FontStyle.italic,
-                fontWeight: FontWeight.w800,
-              ),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 18),
-            child: Icon(Icons.favorite_border_rounded),
+    final background = InstagramColors.background(context);
+    final primaryText = InstagramColors.textPrimary(context);
+    final divider = InstagramColors.border(context);
+
+    return ChangeNotifierProvider.value(
+      value: _feedProvider,
+      child: Scaffold(
+        backgroundColor: background,
+        appBar: AppBar(
+          backgroundColor: background,
+          foregroundColor: primaryText,
+          elevation: 0,
+          centerTitle: true,
+          toolbarHeight: 48,
+          leading: IconButton(
+            onPressed: widget.onCreatePost,
+            icon: const Icon(Icons.add, size: 28),
           ),
-          Padding(
-            padding: EdgeInsets.only(right: 18),
-            child: Icon(Icons.chat_bubble_outline_rounded),
-          ),
-        ],
-      ),
-      body: ListView(
-        children: [
-          SizedBox(
-            height: 108,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              scrollDirection: Axis.horizontal,
-              children: const [
-                _StoryBubble(name: 'You'),
-                _StoryBubble(name: 'Aria'),
-                _StoryBubble(name: 'Noah'),
-                _StoryBubble(name: 'Mia'),
-                _StoryBubble(name: 'Liam'),
-                _StoryBubble(name: 'Zoe'),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.border),
-          ..._posts.map((post) => _PostCard(post: post)),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: AppColors.border)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Icon(Icons.home_filled, size: 28),
-                const Icon(Icons.search_rounded, size: 28),
-                const Icon(Icons.add_box_outlined, size: 28),
-                const Icon(Icons.video_collection_outlined, size: 28),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const InstagramHomeScreen(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.textPrimary, width: 2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person, size: 18),
-                  ),
+          title: Text(
+            'Instagram',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: primaryText,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 27,
                 ),
-              ],
-            ),
           ),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: Icon(Icons.favorite_border_rounded, size: 28),
+            ),
+          ],
         ),
+        body: Consumer<FeedProvider>(
+          builder: (context, feedProvider, child) {
+            if (feedProvider.isLoading && feedProvider.posts.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(InstagramColors.blue),
+                ),
+              );
+            }
+
+            if (feedProvider.hasError && feedProvider.posts.isEmpty) {
+              return _FeedErrorState(
+                message: feedProvider.errorMessage ?? 'Failed to load feed',
+                onRetry: _refreshFeed,
+              );
+            }
+
+            if (feedProvider.posts.isEmpty) {
+              return const _EmptyFeedState();
+            }
+
+            final suggestedUsers = _uniqueUsers(feedProvider.posts);
+
+            return RefreshIndicator(
+              onRefresh: _refreshFeed,
+              color: InstagramColors.blue,
+              backgroundColor: InstagramColors.modal(context),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                children: [
+                  _StoriesStrip(
+                    username: widget.username,
+                    users: suggestedUsers,
+                  ),
+                  Divider(height: 1, color: divider),
+                  for (var index = 0; index < feedProvider.posts.length; index++) ...[
+                    PostCard(
+                      post: feedProvider.posts[index],
+                      currentUsername: widget.username,
+                      suggestedUsers: suggestedUsers,
+                      isLikePending: feedProvider.isLikePending(
+                        feedProvider.posts[index].id,
+                      ),
+                      isCommentPending: feedProvider.isCommentPending(
+                        feedProvider.posts[index].id,
+                      ),
+                      onToggleLike: () => feedProvider.toggleLike(
+                        feedProvider.posts[index].id,
+                      ),
+                      onAddComment: (text) => feedProvider.addComment(
+                        postId: feedProvider.posts[index].id,
+                        text: text,
+                        currentUsername: widget.username,
+                      ),
+                    ),
+                    if (index == 0 && suggestedUsers.isNotEmpty)
+                      _SuggestedUsersSection(users: suggestedUsers),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<PostUser> _uniqueUsers(List<Post> posts) {
+    final seen = <int>{};
+    final users = <PostUser>[];
+
+    for (final post in posts) {
+      if (seen.add(post.user.id)) {
+        users.add(post.user);
+      }
+    }
+
+    return users.take(8).toList();
+  }
+}
+
+class _FeedErrorState extends StatelessWidget {
+  const _FeedErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryText = InstagramColors.textPrimary(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, color: primaryText, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: TextStyle(color: primaryText),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: InstagramColors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StoriesStrip extends StatelessWidget {
+  const _StoriesStrip({
+    required this.username,
+    required this.users,
+  });
+
+  final String username;
+  final List<PostUser> users;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 102,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+        children: [
+          _StoryBubble(username: 'Your story', isCurrentUser: true),
+          for (final user in users)
+            _StoryBubble(
+              username: user.username,
+              imageUrl: user.profileImageUrl,
+            ),
+        ],
       ),
     );
   }
 }
 
 class _StoryBubble extends StatelessWidget {
-  const _StoryBubble({required this.name});
+  const _StoryBubble({
+    required this.username,
+    this.imageUrl,
+    this.isCurrentUser = false,
+  });
 
-  final String name;
+  final String username;
+  final String? imageUrl;
+  final bool isCurrentUser;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 14),
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+    final background = InstagramColors.background(context);
+    final primaryText = InstagramColors.textPrimary(context);
+
+    return SizedBox(
+      width: 76,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFFEDA75),
-                  Color(0xFFFA7E1E),
-                  Color(0xFFD62976),
-                  Color(0xFF962FBF),
-                ],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(3),
-              child: Container(
-                decoration: const BoxDecoration(
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 66,
+                height: 66,
+                padding: EdgeInsets.all(isCurrentUser ? 0 : 2.5),
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
+                  color: isCurrentUser ? const Color(0xFFE9EDF4) : null,
+                  gradient: isCurrentUser
+                      ? null
+                      : const LinearGradient(
+                          colors: [
+                            Color(0xFFFEDA75),
+                            Color(0xFFFA7E1E),
+                            Color(0xFFD62976),
+                            Color(0xFF962FBF),
+                          ],
+                        ),
                 ),
-                child: const Icon(
-                  Icons.person,
-                  color: AppColors.textSecondary,
-                  size: 32,
+                child: ClipOval(
+                  child: ColoredBox(
+                    color: const Color(0xFFE9EDF4),
+                    child: hasImage
+                        ? Image.network(imageUrl!, fit: BoxFit.cover)
+                        : const Icon(
+                            Icons.person,
+                            color: Color(0xFF7B838F),
+                            size: 34,
+                          ),
+                  ),
                 ),
               ),
-            ),
+              if (isCurrentUser)
+                Positioned(
+                  right: 1,
+                  bottom: 1,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: background,
+                        width: 3,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.add,
+                      color: background,
+                      size: 15,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           Text(
-            name,
-            style: const TextStyle(fontSize: 12),
+            username,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: primaryText, fontSize: 11.5),
           ),
         ],
       ),
@@ -181,170 +332,140 @@ class _StoryBubble extends StatelessWidget {
   }
 }
 
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
+class _SuggestedUsersSection extends StatelessWidget {
+  const _SuggestedUsersSection({required this.users});
 
-  final _FeedPost post;
+  final List<PostUser> users;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFFEDA75),
-                      Color(0xFFD62976),
-                      Color(0xFF962FBF),
-                    ],
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.all(2.5),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.username,
-                      style: const TextStyle(
+    return ColoredBox(
+      color: InstagramColors.background(context),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 0, 18),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16, bottom: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Suggested for you',
+                      style: TextStyle(
+                        color: InstagramColors.textPrimary(context),
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        fontSize: 16,
                       ),
                     ),
-                    Text(
-                      post.location,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
+                  ),
+                  Text(
+                    'See all',
+                    style: TextStyle(
+                      color: Color(0xFF8EA7FF),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const Icon(Icons.more_horiz_rounded),
-            ],
-          ),
-        ),
-        ClipRRect(
-          child: Image.network(
-            post.imageUrl,
-            height: 420,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) {
-                return child;
-              }
-
-              return Container(
-                height: 420,
-                color: const Color(0xFFF3F4F6),
-                alignment: Alignment.center,
-                child: const CircularProgressIndicator(),
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-          child: Row(
-            children: const [
-              Icon(Icons.favorite_border_rounded, size: 28),
-              SizedBox(width: 14),
-              Icon(Icons.mode_comment_outlined, size: 26),
-              SizedBox(width: 14),
-              Icon(Icons.send_outlined, size: 25),
-              Spacer(),
-              Icon(Icons.bookmark_border_rounded, size: 27),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          child: Text(
-            post.likes,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-          child: RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                height: 1.5,
+            SizedBox(
+              height: 202,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: users.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  return _SuggestedUserCard(user: users[index]);
+                },
               ),
-              children: [
-                TextSpan(
-                  text: '${post.username} ',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                TextSpan(text: post.caption),
-              ],
             ),
-          ),
+          ],
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          child: Text(
-            'View all comments',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-            ),
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(14, 0, 14, 18),
-          child: Text(
-            '2 HOURS AGO',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 11,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _FeedPost {
-  const _FeedPost({
-    required this.username,
-    required this.location,
-    required this.imageUrl,
-    required this.likes,
-    required this.caption,
-  });
+class _SuggestedUserCard extends StatelessWidget {
+  const _SuggestedUserCard({required this.user});
 
-  final String username;
-  final String location;
-  final String imageUrl;
-  final String likes;
-  final String caption;
+  final PostUser user;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty;
+
+    return Container(
+      width: 166,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: InstagramColors.elevatedSurface(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF272D37)),
+      ),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: Icon(
+              Icons.close,
+              color: Color(0xD9FFFFFF),
+              size: 18,
+            ),
+          ),
+          ClipOval(
+            child: Container(
+              width: 76,
+              height: 76,
+              color: const Color(0xFFE9EDF4),
+              child: hasImage
+                  ? Image.network(user.profileImageUrl!, fit: BoxFit.cover)
+                  : const Icon(
+                      Icons.person,
+                      color: Color(0xFF7B838F),
+                      size: 42,
+                    ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            user.username,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: InstagramColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Suggested for you',
+            style: TextStyle(color: Color(0xFFA8ADB7), fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyFeedState extends StatelessWidget {
+  const _EmptyFeedState();
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryText = InstagramColors.textPrimary(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.photo_library_outlined, color: primaryText, size: 48),
+          const SizedBox(height: 16),
+          Text('No posts yet', style: TextStyle(color: primaryText)),
+        ],
+      ),
+    );
+  }
 }

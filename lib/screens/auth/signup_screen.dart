@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
-import 'login_screen.dart';
+import '../../services/auth_api_service.dart';
+import '../home/instagram_main_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -14,6 +15,36 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authApi = AuthApiService();
+  bool _isSubmitting = false;
+
+  String? _validateSignup({
+    required String email,
+    required String username,
+    required String password,
+  }) {
+    final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    final capitalPattern = RegExp(r'[A-Z]');
+    final specialPattern = RegExp(r'[^A-Za-z0-9]');
+
+    if (email.isEmpty || username.isEmpty || password.isEmpty) {
+      return 'Please fill email, username, and password.';
+    }
+    if (!emailPattern.hasMatch(email)) {
+      return 'Please enter a valid email address.';
+    }
+    if (password.length <= 6) {
+      return 'Password must be greater than 6 characters.';
+    }
+    if (!capitalPattern.hasMatch(password)) {
+      return 'Password must contain at least one capital letter.';
+    }
+    if (!specialPattern.hasMatch(password)) {
+      return 'Password must contain at least one special character.';
+    }
+
+    return null;
+  }
 
   @override
   void dispose() {
@@ -62,35 +93,65 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   const SizedBox(height: 18),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: _isSubmitting
+                        ? null
+                        : () async {
                       final email = _emailController.text.trim();
                       final username = _usernameController.text.trim();
                       final password = _passwordController.text;
+                      final validationMessage = _validateSignup(
+                        email: email,
+                        username: username,
+                        password: password,
+                      );
 
-                      if (email.isEmpty ||
-                          username.isEmpty ||
-                          password.isEmpty) {
+                      if (validationMessage != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please fill email, username, and password.'),
+                          SnackBar(
+                            content: Text(validationMessage),
                           ),
                         );
                         return;
                       }
 
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => LoginScreen(
-                            initialUsername: username,
-                            initialPassword: password,
+                      setState(() => _isSubmitting = true);
+                      try {
+                        final result = await _authApi.createAccount(
+                          email: email,
+                          username: username,
+                          password: password,
+                        );
+
+                        if (!context.mounted) return;
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => InstagramMainScreen(
+                              username: result.username,
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      } on AuthApiException catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error.message)),
+                        );
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not connect to the backend.'),
+                          ),
+                        );
+                      } finally {
+                        if (mounted) {
+                          setState(() => _isSubmitting = false);
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF3797EF),
                     ),
-                    child: const Text('Submit'),
+                    child: Text(_isSubmitting ? 'Creating...' : 'Submit'),
                   ),
                   const SizedBox(height: 18),
                   Text(

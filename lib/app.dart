@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
-import 'screens/auth/login_screen.dart';
+import 'screens/auth/auth_gate.dart';
 
 class ClassicoApp extends StatelessWidget {
   const ClassicoApp({super.key});
@@ -12,7 +12,9 @@ class ClassicoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Instagram Auth UI',
       theme: AppTheme.lightTheme,
-      home: const LoginScreen(),
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
+      home: const AuthGate(),
     );
   }
 }
