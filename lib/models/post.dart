@@ -1,3 +1,5 @@
+import '../services/api_config.dart';
+
 class Post {
   final int id;
   final PostUser user;
@@ -35,8 +37,8 @@ class Post {
     return Post(
       id: json['id'] as int,
       user: PostUser.fromJson(json['user'] as Map<String, dynamic>),
-      image: json['image'] as String? ?? '',
-      imageUrl: json['image_url'] as String?,
+      image: ApiConfig.resolveMediaUrl(json['image'] as String?),
+      imageUrl: ApiConfig.resolveMediaUrl(json['image_url'] as String?),
       caption: json['caption'] as String? ?? '',
       likesCount: json['likes_count'] as int? ?? 0,
       isLiked: json['is_liked'] as bool? ?? false,
@@ -152,7 +154,7 @@ class PostUser {
       email: json['email'] as String,
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
-      profileImageUrl: json['profile_image_url'] as String?,
+      profileImageUrl: ApiConfig.resolveMediaUrl(json['profile_image_url'] as String?),
     );
   }
 
