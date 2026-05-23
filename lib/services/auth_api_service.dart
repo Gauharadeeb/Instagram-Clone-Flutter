@@ -148,10 +148,21 @@ class AuthApiService {
 
     final data = decoded as Map<String, dynamic>;
     final user = data['user'] as Map<String, dynamic>;
+    final accessToken =
+        (data['access'] ?? data['access_token'] ?? data['token']) as String?;
+    final refreshToken =
+        (data['refresh'] ?? data['refresh_token']) as String? ?? '';
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw const AuthApiException(
+        'Login succeeded but no access token was returned.',
+      );
+    }
+
     final result = AuthResult(
       username: user['username'] as String,
-      accessToken: data['access'] as String,
-      refreshToken: data['refresh'] as String,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
     );
 
     // Save tokens to local storage after successful login

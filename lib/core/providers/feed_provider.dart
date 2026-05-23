@@ -19,6 +19,7 @@ class FeedProvider with ChangeNotifier {
   List<Post> _posts = [];
   FeedStatus _status = FeedStatus.initial;
   String? _errorMessage;
+  bool _isAuthError = false;
   final Set<int> _pendingLikePostIds = {};
   final Set<int> _pendingCommentPostIds = {};
 
@@ -27,31 +28,47 @@ class FeedProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isLoading => _status == FeedStatus.loading;
   bool get hasError => _status == FeedStatus.error;
+  bool get isAuthError => _isAuthError;
   bool isLikePending(int postId) => _pendingLikePostIds.contains(postId);
   bool isCommentPending(int postId) => _pendingCommentPostIds.contains(postId);
 
   Future<void> loadFeed() async {
     _status = FeedStatus.loading;
     _errorMessage = null;
+    _isAuthError = false;
     notifyListeners();
 
     try {
       final backendPosts = await apiService.getFeed();
       _posts = backendPosts.isNotEmpty ? backendPosts : await apiService.getDemoFeed();
       _status = FeedStatus.success;
-    } catch (e) {
-      try {
-        _posts = await apiService.getDemoFeed();
-        _status = FeedStatus.success;
-        _errorMessage = null;
-      } catch (demoError) {
+    } on FeedApiException catch (e) {
+      if (e.isAuthError) {
         _status = FeedStatus.error;
-        _errorMessage = demoError.toString();
+        _isAuthError = true;
+        _errorMessage = e.message;
         _posts = [];
+      } else {
+        await _loadDemoFallback();
       }
+    } catch (e) {
+      await _loadDemoFallback();
     }
 
     notifyListeners();
+  }
+
+  Future<void> _loadDemoFallback() async {
+    try {
+      _posts = await apiService.getDemoFeed();
+      _status = FeedStatus.success;
+      _errorMessage = null;
+      _isAuthError = false;
+    } catch (demoError) {
+      _status = FeedStatus.error;
+      _errorMessage = demoError.toString();
+      _posts = [];
+    }
   }
 
   Future<void> refreshFeed() async {
@@ -99,6 +116,11 @@ class FeedProvider with ChangeNotifier {
           isLiked: isLiked as bool? ?? shouldLike,
         );
       }
+    } on FeedApiException catch (e) {
+      _posts[postIndex] = originalPost;
+      _errorMessage = e.message;
+      _isAuthError = e.isAuthError;
+      debugPrint('Error toggling post like: $e');
     } catch (e) {
       _posts[postIndex] = originalPost;
       _errorMessage = e.toString();
@@ -160,6 +182,12 @@ class FeedProvider with ChangeNotifier {
         comments: updatedComments,
         commentsCount: updatedComments.length,
       );
+    } on FeedApiException catch (e) {
+      _posts[postIndex] = originalPost;
+      _errorMessage = e.message;
+      _isAuthError = e.isAuthError;
+      debugPrint('Error adding post comment: $e');
+      rethrow;
     } catch (e) {
       _posts[postIndex] = originalPost;
       _errorMessage = e.toString();
@@ -173,6 +201,7 @@ class FeedProvider with ChangeNotifier {
 
   void clearError() {
     _errorMessage = null;
+    _isAuthError = false;
     _status = FeedStatus.initial;
     notifyListeners();
   }

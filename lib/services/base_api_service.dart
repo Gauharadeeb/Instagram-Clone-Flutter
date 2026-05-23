@@ -58,6 +58,7 @@ class BaseApiService {
 
       return _handleResponse<T>(response, fromJson: fromJson);
     } catch (e) {
+      await _clearTokenIfUnauthorized(e);
       throw _handleError(e);
     }
   }
@@ -82,6 +83,7 @@ class BaseApiService {
 
       return _handleResponse<T>(response, fromJson: fromJson);
     } catch (e) {
+      await _clearTokenIfUnauthorized(e);
       throw _handleError(e);
     }
   }
@@ -106,6 +108,7 @@ class BaseApiService {
 
       return _handleResponse<T>(response, fromJson: fromJson);
     } catch (e) {
+      await _clearTokenIfUnauthorized(e);
       throw _handleError(e);
     }
   }
@@ -128,6 +131,7 @@ class BaseApiService {
 
       return _handleResponse<T>(response, fromJson: fromJson);
     } catch (e) {
+      await _clearTokenIfUnauthorized(e);
       throw _handleError(e);
     }
   }
@@ -191,5 +195,11 @@ class BaseApiService {
       'An unexpected error occurred: $error',
       statusCode: null,
     );
+  }
+
+  Future<void> _clearTokenIfUnauthorized(dynamic error) async {
+    if (error is ApiException && error.statusCode == 401) {
+      await _tokenStorage.clearTokens();
+    }
   }
 }

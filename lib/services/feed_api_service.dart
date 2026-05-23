@@ -8,9 +8,12 @@ import 'base_api_service.dart';
 import 'token_storage_service.dart';
 
 class FeedApiException implements Exception {
-  const FeedApiException(this.message);
+  const FeedApiException(this.message, {this.statusCode});
 
   final String message;
+  final int? statusCode;
+
+  bool get isAuthError => statusCode == 401 || statusCode == 403;
 
   @override
   String toString() => message;
@@ -41,7 +44,7 @@ class FeedApiService extends BaseApiService {
 
       return response.map((json) => Post.fromJson(json as Map<String, dynamic>)).toList();
     } on ApiException catch (e) {
-      throw FeedApiException(e.message);
+      throw FeedApiException(e.message, statusCode: e.statusCode);
     } catch (e) {
       throw FeedApiException('Network error: $e');
     }
@@ -108,7 +111,7 @@ class FeedApiService extends BaseApiService {
           .map(PostUser.fromJson)
           .toList();
     } on ApiException catch (e) {
-      throw FeedApiException(e.message);
+      throw FeedApiException(e.message, statusCode: e.statusCode);
     } catch (e) {
       throw FeedApiException('Suggested users error: $e');
     }
@@ -206,7 +209,7 @@ class FeedApiService extends BaseApiService {
 
       return response;
     } on ApiException catch (e) {
-      throw FeedApiException(e.message);
+      throw FeedApiException(e.message, statusCode: e.statusCode);
     } catch (e) {
       throw FeedApiException('Network error: $e');
     }
@@ -231,7 +234,7 @@ class FeedApiService extends BaseApiService {
 
       return PostComment.fromJson(response);
     } on ApiException catch (e) {
-      throw FeedApiException(e.message);
+      throw FeedApiException(e.message, statusCode: e.statusCode);
     } catch (e) {
       throw FeedApiException('Network error: $e');
     }
@@ -243,14 +246,19 @@ class FeedApiService extends BaseApiService {
   }) async {
     try {
       final token = await _tokenStorage.getAccessToken();
+      if (token == null || token.isEmpty) {
+        throw const FeedApiException(
+          'Authentication required. Please login again.',
+          statusCode: 401,
+        );
+      }
+
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/api/posts/create/'),
       );
 
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
+      request.headers['Authorization'] = 'Bearer $token';
 
       request.fields['caption'] = caption;
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
@@ -262,8 +270,12 @@ class FeedApiService extends BaseApiService {
         return Post.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
       }
 
-      if (response.statusCode == 401) {
-        throw const FeedApiException('Authentication required. Please login again.');
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await _tokenStorage.clearTokens();
+        throw const FeedApiException(
+          'Authentication required. Please login again.',
+          statusCode: 401,
+        );
       }
 
       throw FeedApiException('Upload failed with status ${response.statusCode}');
@@ -292,7 +304,7 @@ class FeedApiService extends BaseApiService {
 
       return Post.fromJson(response);
     } on ApiException catch (e) {
-      throw FeedApiException(e.message);
+      throw FeedApiException(e.message, statusCode: e.statusCode);
     } catch (e) {
       throw FeedApiException('Network error: $e');
     }

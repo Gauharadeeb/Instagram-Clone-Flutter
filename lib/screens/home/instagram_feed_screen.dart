@@ -6,6 +6,7 @@ import '../../core/providers/feed_provider.dart';
 import '../../models/post.dart';
 import '../../services/feed_api_service.dart';
 import '../../widgets/post_card.dart';
+import '../auth/login_screen.dart';
 
 class InstagramFeedScreen extends StatefulWidget {
   const InstagramFeedScreen({
@@ -25,11 +26,13 @@ class InstagramFeedScreen extends StatefulWidget {
 
 class _InstagramFeedScreenState extends State<InstagramFeedScreen> {
   late final FeedProvider _feedProvider;
+  bool _isRedirectingToLogin = false;
 
   @override
   void initState() {
     super.initState();
     _feedProvider = FeedProvider(apiService: FeedApiService());
+    _feedProvider.addListener(_handleAuthError);
     _feedProvider.loadFeed();
   }
 
@@ -43,11 +46,24 @@ class _InstagramFeedScreenState extends State<InstagramFeedScreen> {
 
   @override
   void dispose() {
+    _feedProvider.removeListener(_handleAuthError);
     _feedProvider.dispose();
     super.dispose();
   }
 
   Future<void> _refreshFeed() => _feedProvider.refreshFeed();
+
+  void _handleAuthError() {
+    if (!mounted || _isRedirectingToLogin || !_feedProvider.isAuthError) {
+      return;
+    }
+
+    _isRedirectingToLogin = true;
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
