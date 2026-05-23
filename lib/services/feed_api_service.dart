@@ -29,7 +29,7 @@ class FeedApiService extends BaseApiService {
   Future<List<Post>> getFeed() async {
     try {
       final response = await get<List<dynamic>>(
-        '/feed/',
+        '/api/posts/',
         requireAuth: true,
         fromJson: (data) {
           if (data is List) {
@@ -191,7 +191,7 @@ class FeedApiService extends BaseApiService {
   Future<Map<String, dynamic>> likePost(int postId, {required bool isLike}) async {
     try {
       final response = await post<Map<String, dynamic>>(
-        '/posts/$postId/like/',
+        '/api/posts/$postId/like/',
         body: {
           'action': isLike ? 'like' : 'unlike',
         },
@@ -216,7 +216,7 @@ class FeedApiService extends BaseApiService {
   Future<PostComment> addComment(int postId, {required String text}) async {
     try {
       final response = await post<Map<String, dynamic>>(
-        '/posts/$postId/comments/',
+        '/api/posts/$postId/comments/',
         body: {
           'text': text,
         },
@@ -245,7 +245,7 @@ class FeedApiService extends BaseApiService {
       final token = await _tokenStorage.getAccessToken();
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/posts/create/'),
+        Uri.parse('$baseUrl/api/posts/create/'),
       );
 
       if (token != null && token.isNotEmpty) {
@@ -280,7 +280,7 @@ class FeedApiService extends BaseApiService {
   Future<Post> getPostDetail(int postId) async {
     try {
       final response = await get<Map<String, dynamic>>(
-        '/posts/$postId/',
+        '/api/posts/$postId/',
         requireAuth: true,
         fromJson: (data) {
           if (data is Map<String, dynamic>) {
